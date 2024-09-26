@@ -1,0 +1,89 @@
+---
+title: "HW4"
+format: pdf
+editor: visual
+output: pdf_document
+name: Hongnan Su
+---
+
+```{r}
+#a
+library(data.table)
+data <- function(year) {
+  file_root <- "https://www.ndbc.noaa.gov/view_text_file.php?filename=44013h"
+  tail <- ".txt.gz&dir=data/historical/stdmet/"
+  path <- paste0(file_root, year, tail)
+  
+  try({
+    header <- scan(path, what = 'character', nlines = 1, quiet = TRUE)
+    buoy <- fread(path, header = FALSE, skip = 2)
+    colnames(buoy) <- header
+    return(buoy)
+  }, silent = TRUE)
+  
+  cat("Error reading data for the year", year, "\n")
+  return(NULL)
+}
+
+all_data <- list()
+
+for (year in 1985:2023) {
+  cat("Reading data for the year", year, "...\n")
+  year_data <- data(year)
+  
+  if (!is.null(year_data)) {
+    if (year < 2000) {
+      year_data[, TIDE:= NA]  
+    }
+    
+    all_data[[as.character(year)]] <- year_data
+  }
+}
+print(all_data)
+```
+```{r}
+#b
+library(data.table)
+data <- as.data.table(all_data)
+data[data == 999] <- NA
+print(data)
+#No,situations that not approprite:
+
+#Context Matters: The meaning of the value you are replacing is crucial.
+
+#Data Integrity: Automatically converting certain values to NA might distort 
+#the dataset and lead to incorrect analyses. Always consider the implications 
+#on data integrity and the analysis that follows.
+
+#Data Type Considerations: If working with categorical data, converting 
+#certain values to NA could remove important distinctions.
+```
+```{r}
+#c
+library("ggplot2")
+regression<-lm(X1985.WD~ X1985.ATMP, data = data)
+Plot<-ggplot(data, aes(x = X1985.ATMP, y =X1985.WD )) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Wind Over Temperature Trend",
+       x = "AIR TEMPRATURE",
+       y = "WIND") +
+  theme_minimal()
+Plot
+```
+```{r}
+#d
+library("rstanarm")
+regression<-stan_glm(X1985.ATMP~X1985.hh, data = data)
+Plot<-ggplot(data, aes(x = X1985.hh, y =X1985.ATMP )) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "brown") +
+  labs(title = " Temperature Trend Over Time",
+       x = "Time",
+       y = "Temperature") +
+  theme_minimal()
+Plot
+#Reaserch how temperature changes in a specific day in 1985
+```
+
+
